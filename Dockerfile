@@ -1,16 +1,17 @@
+FROM bitnami/kubectl:1.20.9 as kubectl
+
 # Use the official Golang image as the base image
 FROM golang:1.23.3
 
 # Install kubectl
 RUN apt-get update && \
   apt-get install -y apt-transport-https gnupg && \
-  curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-  echo "deb https://apt.kubernetes.io/ kubernetes-$(lsb_release -cs) main" > /etc/apt/sources.list.d/kubernetes.list && \
-  apt-get update && \
-  apt-get install -y kubectl
+  apt-get update
 
 # Set the working directory inside the container
 WORKDIR /app
+
+COPY --from=kubectl /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/
 
 # Copy the Go modules manifests
 COPY go.mod go.sum ./
