@@ -23,6 +23,7 @@ type UdlServer struct {
 	Password   string `json:"password"`
 	Map        string `json:"map"`
 	Port       int    `json:"port"`
+	RCON       string `json:"rcon"`
 }
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -111,6 +112,13 @@ func (u *UdlServer) RenderTemplate() (string, error) {
 
 	u.Port = port
 
+	rconPassword, err := generatePassword(46)
+	if err != nil {
+		return "", fmt.Errorf("failed to find a free port: %w", err)
+	}
+
+	u.RCON = rconPassword
+
 	tmpl, err := template.New("udl_server").Parse(UDL_SERVER)
 	if err != nil {
 		return "", err
@@ -162,7 +170,7 @@ spec:
             - name: SRCDS_MAXPLAYERS
               value: "12"
             - name: SRCDS_RCONPW
-              value: dhaiwdad312331ddw##231232313dddddddddd
+              value: "{{ .RCON }}"
             - name: SRCDS_STARTMAP
               value: {{ or .Map "tfdb_octagon_odb_a1" }}
             - name: SRCDS_STATIC_HOSTNAME
