@@ -1,0 +1,23 @@
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: udl
+  name: deployment-manager-udl
+rules:
+  - apiGroups: ['apps']
+    resources: ['deployments']
+    verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete']
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: deployment-manager-binding-udl
+  namespace: udl
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: udl
+roleRef:
+  kind: Role
+  name: deployment-manager-udl
+  apiGroup: rbac.authorization.k8s.io

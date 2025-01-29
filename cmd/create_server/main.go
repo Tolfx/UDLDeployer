@@ -1,0 +1,147 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
+	"github.com/Tolfx/UDLDeployer/internal/db"
+	"github.com/Tolfx/UDLDeployer/internal/steam"
+	"github.com/Tolfx/UDLDeployer/internal/templates"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+)
+
+func main() {
+	// Load .env file
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Error loading .env file")
+	}
+
+	// Get environment variables
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	// Create connection string
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+
+	// Connect to the database
+	dbConn, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		panic(err)
+	}
+	defer dbConn.Close()
+
+	// Verify connection
+	err = dbConn.Ping()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Successfully connected to the database!")
+
+	// Fetch league matches
+	matches, err := db.FetchLeagueMatches(dbConn, []int{0})
+	if err != nil {
+		panic(err)
+	}
+
+	steamService := steam.NewSteamClient(os.Getenv("STEAM_WEB_API_KEY"))
+
+	for _, match := range matches {
+		matchRounds, err := db.FetchMatchRounds(dbConn, match.ID)
+		if err != nil {
+			panic(err)
+		}
+
+		// Fetch division for home team
+		division, err := db.FetchDivision(dbConn, match.RosterHomeID)
+		if err != nil {
+			panic(err)
+		}
+
+		// Fetch home team steam IDs
+		homeTeamSteamIDs, err := db.FetchTeamSteamIDs(dbConn, match.RosterHomeID)
+		if err != nil {
+			panic(err)
+		}
+
+		// Fetch away team steam IDs
+		awayTeamSteamIDs, err := db.FetchTeamSteamIDs(dbConn, match.RosterAwayID)
+		if err != nil {
+			panic(err)
+		}
+
+		for _, round := range matchRounds {
+
+			udlServer, err := templates.NewUdlServer(
+				fmt.Sprintf("%d", match.ID),
+				division,
+				fmt.Sprintf("%d", match.RosterAwayID),
+				fmt.Sprintf("%d", match.RosterHomeID),
+				strings.Join(strings.Split(awayTeamSteamIDs, ","), ","),
+				strings.Join(strings.Split(homeTeamSteamIDs, ","), ","),
+				round.ID,
+			)
+
+			if err != nil {
+				panic(err)
+			}
+
+			mapName, err := db.FetchMapName(dbConn, round.MapID)
+			if err != nil {
+				panic(err)
+			}
+
+			udlServer.SetMap(*mapName)
+
+			// Check if the deployment already exists
+			deploymentName := udlServer.GetName()
+			cmd := exec.Command("kubectl", "get", "deployment", deploymentName, "-n", "udl", "-o", "jsonpath={.metadata.name}")
+			output, err := cmd.Output()
+			if err != nil {
+				if _, ok := err.(*exec.ExitError); ok {
+					fmt.Printf("Deployment %s does not exist, proceeding with creation.\n", deploymentName)
+				} else {
+					fmt.Println("Error", err)
+					panic(err)
+				}
+			}
+
+			if string(output) == deploymentName {
+				fmt.Printf("Deployment %s already exists, skipping creation.\n", deploymentName)
+				continue
+			}
+
+			// No server, we now need to create custom steam token
+			steamToken, err := steamService.CreateAccount(440, deploymentName)
+			if err != nil {
+				panic(err)
+			}
+
+			udlServer.SetSRCDSToken(steamToken.LoginToken)
+
+			renderedTemplate, err := udlServer.RenderTemplate()
+			if err != nil {
+				panic(err)
+			}
+
+			// Create the deployment
+			createCmd := exec.Command("kubectl", "apply", "-f", "-")
+			createCmd.Stdin = strings.NewReader(renderedTemplate)
+			createOutput, err := createCmd.CombinedOutput()
+			if err != nil {
+				panic(fmt.Sprintf("Failed to create deployment: %s", string(createOutput)))
+			}
+
+			fmt.Printf("Deployment %s created successfully.\n", deploymentName)
+		}
+	}
+}
