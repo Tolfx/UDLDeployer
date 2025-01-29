@@ -162,7 +162,7 @@ spec:
             - name: SRCDS_MAXPLAYERS
               value: "12"
             - name: SRCDS_RCONPW
-              value: dhaiwdad312331ddw##231232313ddddddddd
+              value: dhaiwdad312331ddw##231232313dddddddddd
             - name: SRCDS_STARTMAP
               value: {{ or .Map "tfdb_octagon_odb_a1" }}
             - name: SRCDS_STATIC_HOSTNAME
