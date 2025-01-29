@@ -144,9 +144,24 @@ func UpdateMatchRound(db *sql.DB, roundID, winnerID, loserID, homeTeamScore, awa
 	SET winner_id = $1, loser_id = $2, home_team_score = $3, away_team_score = $4, has_outcome = TRUE, score_difference = ABS($3 - $4)
 	WHERE id = $5
 	`
+
 	_, err := db.Exec(query, winnerID, loserID, homeTeamScore, awayTeamScore, roundID)
 	if err != nil {
 		return fmt.Errorf("failed to update match round: %w", err)
+	}
+	return nil
+}
+
+func UpdateMatchStatus(db *sql.DB, matchID int, status int) error {
+	query := `
+	UPDATE league_matches
+	SET status = $1
+	WHERE id = $2
+	`
+
+	_, err := db.Exec(query, status, matchID)
+	if err != nil {
+		return fmt.Errorf("failed to update match status: %w", err)
 	}
 	return nil
 }

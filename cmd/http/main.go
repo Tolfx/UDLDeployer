@@ -96,6 +96,8 @@ func main() {
 			return
 		}
 
+		db.UpdateMatchStatus(dbConn, scoreData.MatchID, 3)
+
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Score data received"))
 	})
