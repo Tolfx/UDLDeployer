@@ -5,6 +5,7 @@ on:
     paths:
       - 'cmd/**'
       - 'internal/**'
+      - 'Dockerfile'
     branches:
       - develop
 
