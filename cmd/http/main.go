@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
@@ -105,6 +106,57 @@ func main() {
 
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Score data received"))
+	})
+
+	http.HandleFunc("/upload-demo", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		querySecretPassword := r.URL.Query().Get("secret_password")
+		if querySecretPassword != secretPassword {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			http.Error(w, "Error retrieving the file", http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		// Create a folder to save the uploaded files if it doesn't exist
+		uploadPath := os.Getenv("UPLOAD_PATH")
+		if uploadPath == "" {
+			uploadPath = "./upload"
+		}
+		if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
+			err = os.Mkdir(uploadPath, os.ModePerm)
+			if err != nil {
+				http.Error(w, "Error creating upload directory", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		// Create a file in the upload directory with the same name as the uploaded file
+		dst, err := os.Create(fmt.Sprintf("%s/%s", uploadPath, header.Filename))
+		if err != nil {
+			http.Error(w, "Error creating the file", http.StatusInternalServerError)
+			return
+		}
+		defer dst.Close()
+
+		// Copy the uploaded file to the destination file
+		_, err = io.Copy(dst, file)
+		if err != nil {
+			http.Error(w, "Error saving the file", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Demo file uploaded successfully"))
 	})
 
 	serverPort := "5823"
