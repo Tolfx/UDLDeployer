@@ -141,11 +141,11 @@ func CreateMatchDetails(db *sql.DB, match_id int, server_ip, port, password, map
 func UpdateMatchRound(db *sql.DB, roundID, winnerID, loserID, homeTeamScore, awayTeamScore int) error {
 	query := `
 	UPDATE league_match_rounds
-	SET winner_id = $1, loser_id = $2, home_team_score = $3, away_team_score = $4, has_outcome = TRUE, score_difference = ABS($3::numeric - $4::numeric)
+	SET winner_id = $1, loser_id = $2, home_team_score = $3, away_team_score = $4, has_outcome = TRUE, score_difference = ABS($3 - $4)
 	WHERE id = $5
 	`
 
-	_, err := db.Exec(query, winnerID, loserID, homeTeamScore, awayTeamScore, roundID)
+	_, err := db.Exec(query, winnerID, loserID, float64(homeTeamScore), float64(awayTeamScore), roundID)
 	if err != nil {
 		return fmt.Errorf("failed to update match round: %w", err)
 	}
