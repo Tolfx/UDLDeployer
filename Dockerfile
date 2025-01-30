@@ -21,3 +21,8 @@ RUN go mod download
 
 # Copy the source code
 COPY . .
+
+# Build all binaries from the cmd folder
+RUN for d in ./cmd/*/ ; do \
+  go build -o /app/bin/$(basename $d) $d ; \
+  done
