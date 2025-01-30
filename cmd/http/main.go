@@ -96,7 +96,12 @@ func main() {
 			return
 		}
 
-		db.UpdateMatchStatus(dbConn, scoreData.MatchID, 3)
+		err = db.UpdateMatchStatus(dbConn, scoreData.MatchID, 3)
+		if err != nil {
+			http.Error(w, "Error updating match status", http.StatusBadRequest)
+			fmt.Println("Error", err)
+			return
+		}
 
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Score data received"))
