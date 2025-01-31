@@ -25,6 +25,14 @@ type MatchRound struct {
 	ScoreDifference float32
 }
 
+type MatchDetails struct {
+	MatchID  int
+	ServerIP string
+	Port     string
+	Password string
+	Map      string
+}
+
 func FetchLeagueMatches(db *sql.DB, statuses []int) ([]Match, error) {
 	query := `
 	SELECT id, home_team_id, away_team_id
@@ -126,16 +134,33 @@ func FetchMapName(db *sql.DB, mapId int) (*string, error) {
 	return &mapName, nil
 }
 
-func CreateMatchDetails(db *sql.DB, match_id int, server_ip, port, password, mapStr string) error {
+func CreateMatchDetails(db *sql.DB, match_id, round_id int, server_ip, port, password, mapStr string) error {
 	query := `
-	INSERT INTO matches_server_details (match_id, server_ip, port, password, map, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+	INSERT INTO matches_server_details (match_id, server_ip, port, password, map, round_id, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
 	`
-	_, err := db.Exec(query, match_id, server_ip, port, password, mapStr)
+	_, err := db.Exec(query, match_id, server_ip, port, password, mapStr, round_id)
 	if err != nil {
 		return fmt.Errorf("failed to create match details: %w", err)
 	}
 	return nil
+}
+
+func FetchMatchDetails(db *sql.DB, matchID, roundID int) (*MatchDetails, error) {
+	query := `
+	SELECT match_id, server_ip, port, password, map
+	FROM matches_server_details
+	WHERE match_id = $1 AND round_id = $2
+	`
+	var details MatchDetails
+	err := db.QueryRow(query, matchID, roundID).Scan(&details.MatchID, &details.ServerIP, &details.Port, &details.Password, &details.Map)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &details, nil
 }
 
 func UpdateMatchRound(db *sql.DB, roundID, winnerID, loserID, homeTeamScore, awayTeamScore int) error {

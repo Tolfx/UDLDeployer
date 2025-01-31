@@ -77,6 +77,15 @@ func main() {
 		}
 
 		for _, round := range matchRounds {
+			// Check if match details already exist
+			existingDetails, err := db.FetchMatchDetails(dbConn, match.ID, round.ID)
+			if err != nil {
+				panic(err)
+			}
+			if existingDetails != nil {
+				fmt.Printf("Match %d Round %d details already exist, skipping...\n", match.ID, round.ID)
+				continue
+			}
 
 			udlServer, err := templates.NewUdlServer(
 				fmt.Sprintf("%d", match.ID),
@@ -155,7 +164,7 @@ func main() {
 
 			fmt.Printf("Match %d Round %d is running on %s:%s with password %s\n", match.ID, round.ID, nodeIP, nodePort, password)
 
-			err = db.CreateMatchDetails(dbConn, match.ID, nodeIP, nodePort, password, *mapName)
+			err = db.CreateMatchDetails(dbConn, match.ID, round.ID, nodeIP, nodePort, password, *mapName)
 			if err != nil {
 				fmt.Println("Error setting match details:", err)
 				panic(err)
