@@ -204,7 +204,7 @@ spec:
       volumes:
         - name: tf-dedicated
           hostPath:
-            path: /home/udl
+            path: /tf/udl
             type: ''
 ---
 apiVersion: v1
