@@ -192,6 +192,9 @@ spec:
           volumeMounts:
             - mountPath: /home/steam/tf-dedicated/
               name: tf-dedicated
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 1000
       tolerations:
         - key: "key"
           operator: "Equal"
