@@ -133,6 +133,14 @@ func main() {
 					fmt.Println("Error getting node internal IP:", err)
 					panic(err)
 				}
+				// Filter out IPv6 addresses, keep only IPv4
+				nodeIPs := strings.Split(strings.TrimSpace(string(nodeIPOutput)), " ")
+				for _, ip := range nodeIPs {
+					if strings.Count(ip, ":") < 2 { // Simple check for IPv4
+						nodeIPOutput = []byte(ip)
+						break
+					}
+				}
 			}
 			nodeIP := strings.TrimSpace(string(nodeIPOutput))
 
