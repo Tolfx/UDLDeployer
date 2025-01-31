@@ -41,7 +41,7 @@ func generatePassword(length int) (string, error) {
 }
 
 func getUsedPorts() (map[int]bool, error) {
-	cmd := exec.Command("kubectl", "get", "pods", "--all-namespaces", "-o", "jsonpath={.items[*].spec.containers[*].ports[*].containerPort}")
+	cmd := exec.Command("kubectl", "get", "pods", "-n", "udl", "-o", "jsonpath={.items[*].spec.containers[*].ports[*].containerPort}")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
