@@ -50,6 +50,7 @@ func main() {
 	// Fetch league matches
 	matches, err := db.FetchLeagueMatches(dbConn, []int{0})
 	if err != nil {
+		fmt.Println("Failed to get league matches")
 		panic(err)
 	}
 
@@ -58,24 +59,28 @@ func main() {
 	for _, match := range matches {
 		matchRounds, err := db.FetchMatchRounds(dbConn, match.ID)
 		if err != nil {
+			fmt.Println("Failed to get match rounds")
 			panic(err)
 		}
 
 		// Fetch division for home team
 		division, err := db.FetchDivision(dbConn, match.RosterHomeID)
 		if err != nil {
+			fmt.Println("Failed to get division")
 			panic(err)
 		}
 
 		// Fetch home team steam IDs
 		homeTeamSteamIDs, err := db.FetchTeamSteamIDs(dbConn, match.RosterHomeID)
 		if err != nil {
+			fmt.Println("Failed to get steam ids from home team")
 			panic(err)
 		}
 
 		// Fetch away team steam IDs
 		awayTeamSteamIDs, err := db.FetchTeamSteamIDs(dbConn, match.RosterAwayID)
 		if err != nil {
+			fmt.Println("Failed to get steam ids from away team")
 			panic(err)
 		}
 
@@ -92,11 +97,13 @@ func main() {
 			)
 
 			if err != nil {
+				fmt.Println("Failed to create udl server template")
 				panic(err)
 			}
 
 			mapName, err := db.FetchMapName(dbConn, round.MapID)
 			if err != nil {
+				fmt.Println("Failed to get map name")
 				panic(err)
 			}
 
@@ -123,6 +130,7 @@ func main() {
 			// No server, we now need to create custom steam token
 			steamToken, err := steamService.CreateAccount(440, deploymentName)
 			if err != nil {
+				fmt.Println("Failed to create account for server")
 				panic(err)
 			}
 
