@@ -18,8 +18,8 @@ type ScoreData struct {
 	RoundID      int `json:"round_id"`
 	WinnerTeamID int `json:"winner_team_id"`
 	LoserTeamID  int `json:"loser_team_id"`
-	WinnerPoints int `json:"winner_points"`
-	LoserPoints  int `json:"loser_points"`
+	AwayPoints   int `json:"away_points"`
+	HomePoints   int `json:"home_points"`
 }
 
 func main() {
@@ -89,7 +89,7 @@ func main() {
 		fmt.Printf("Received score data: %+v\n", scoreData)
 
 		// Update database
-		err = db.UpdateMatchRound(dbConn, scoreData.RoundID, scoreData.WinnerTeamID, scoreData.LoserTeamID, scoreData.WinnerPoints, scoreData.LoserPoints)
+		err = db.UpdateMatchRound(dbConn, scoreData.RoundID, scoreData.WinnerTeamID, scoreData.LoserTeamID, scoreData.HomePoints, scoreData.AwayPoints)
 
 		if err != nil {
 			http.Error(w, "Error updating data", http.StatusBadRequest)
