@@ -169,6 +169,11 @@ func main() {
 				fmt.Println("Error setting match details:", err)
 				panic(err)
 			}
+
+			message := fmt.Sprintf("Match %d Round %d is running on %s:%s with password %s", match.ID, round.ID, nodeIP, nodePort, password)
+			link := fmt.Sprintf("/matches/%d", match.ID)
+			db.SendNotificationsToTeams(dbConn, match.RosterHomeID, match.RosterAwayID, message, link)
+
 		}
 	}
 }

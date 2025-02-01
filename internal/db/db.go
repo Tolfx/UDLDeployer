@@ -33,6 +33,16 @@ type MatchDetails struct {
 	Map      string
 }
 
+type UserNotification struct {
+	ID        int
+	UserID    int
+	Read      bool
+	Message   string
+	Link      string
+	CreatedAt string
+	UpdatedAt string
+}
+
 func FetchLeagueMatches(db *sql.DB, statuses []int) ([]Match, error) {
 	query := `
 	SELECT id, home_team_id, away_team_id
@@ -89,6 +99,36 @@ func FetchTeamSteamIDs(db *sql.DB, rosterId int) (string, error) {
 		return "", err
 	}
 	return steamIDs, nil
+}
+
+func FetchTeamUserIDs(db *sql.DB, rosterId int) ([]int, error) {
+	query := `
+	SELECT user_id
+	FROM league_roster_players
+	WHERE roster_id = $1
+	`
+	rows, err := db.Query(query, rosterId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var userIDs []int
+	for rows.Next() {
+		var userID int
+		err := rows.Scan(&userID)
+		if err != nil {
+			return nil, err
+		}
+		userIDs = append(userIDs, userID)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return userIDs, nil
 }
 
 func FetchMatchRounds(db *sql.DB, matchID int) ([]MatchRound, error) {
@@ -193,5 +233,45 @@ func UpdateMatchStatus(db *sql.DB, matchID int, status int) error {
 	if err != nil {
 		return fmt.Errorf("failed to update match status: %w", err)
 	}
+	return nil
+}
+
+func CreateUserNotification(db *sql.DB, userID int, message, link string) error {
+	query := `
+	INSERT INTO user_notifications (user_id, read, message, link, created_at, updated_at)
+	VALUES ($1, FALSE, $2, $3, NOW(), NOW())
+	`
+	_, err := db.Exec(query, userID, message, link)
+	if err != nil {
+		return fmt.Errorf("failed to create user notification: %w", err)
+	}
+	return nil
+}
+
+func SendNotificationsToTeams(db *sql.DB, homeRosterId, awayRosterId int, message, link string) error {
+	homeUserIDs, err := FetchTeamUserIDs(db, homeRosterId)
+	if err != nil {
+		return fmt.Errorf("failed to fetch home team user IDs: %w", err)
+	}
+
+	awayUserIDs, err := FetchTeamUserIDs(db, awayRosterId)
+	if err != nil {
+		return fmt.Errorf("failed to fetch away team user IDs: %w", err)
+	}
+
+	for _, userID := range homeUserIDs {
+		err := CreateUserNotification(db, userID, message, link)
+		if err != nil {
+			return fmt.Errorf("failed to send notification to home team user %d: %w", userID, err)
+		}
+	}
+
+	for _, userID := range awayUserIDs {
+		err := CreateUserNotification(db, userID, message, link)
+		if err != nil {
+			return fmt.Errorf("failed to send notification to away team user %d: %w", userID, err)
+		}
+	}
+
 	return nil
 }
