@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/Tolfx/UDLDeployer/internal/db"
 	"github.com/joho/godotenv"
@@ -159,10 +161,71 @@ func main() {
 		w.Write([]byte("Demo file uploaded successfully"))
 	})
 
+	http.HandleFunc("/get-demo", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		matchID := r.URL.Query().Get("match_id")
+		roundID := r.URL.Query().Get("round_id")
+		if matchID == "" || roundID == "" {
+			http.Error(w, "Missing match_id or round_id", http.StatusBadRequest)
+			return
+		}
+
+		uploadPath := os.Getenv("DEMO_PATH")
+		if uploadPath == "" {
+			uploadPath = "./demo"
+		}
+
+		// Find the file with the given match ID and round ID using regex
+		filePattern := fmt.Sprintf(`match-%s-round-%s`, matchID, roundID)
+		files, err := os.ReadDir(uploadPath)
+		if err != nil {
+			http.Error(w, "Error reading demo directory", http.StatusInternalServerError)
+			return
+		}
+
+		var demoFile string
+		var maxSize int64
+		for _, file := range files {
+			if !file.IsDir() && matchRegex(file.Name(), filePattern) {
+				fileInfo, err := file.Info()
+				if err != nil {
+					continue
+				}
+				if fileInfo.Size() > maxSize {
+					maxSize = fileInfo.Size()
+					demoFile = file.Name()
+				}
+			}
+		}
+
+		if demoFile == "" {
+			http.Error(w, "Demo file not found", http.StatusNotFound)
+			return
+		}
+
+		// Serve the file
+		http.ServeFile(w, r, fmt.Sprintf("%s/%s", uploadPath, demoFile))
+	})
+
 	serverPort := "5823"
 
 	fmt.Printf("Starting server on port %s...\n", serverPort)
 	if err := http.ListenAndServe(":"+serverPort, nil); err != nil {
 		panic(err)
 	}
+}
+
+// Helper function to check if a string contains a substring
+func contains(str, substr string) bool {
+	return strings.Contains(str, substr)
+}
+
+// Helper function to check if a string matches a regex pattern
+func matchRegex(str, pattern string) bool {
+	matched, _ := regexp.MatchString(pattern, str)
+	return matched
 }
