@@ -207,6 +207,8 @@ func main() {
 			return
 		}
 
+		fmt.Printf("Downloading demo file: %s\n", demoFile)
+
 		// Set the original file name in the response header
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", demoFile))
 		http.ServeFile(w, r, fmt.Sprintf("%s/%s", uploadPath, demoFile))
