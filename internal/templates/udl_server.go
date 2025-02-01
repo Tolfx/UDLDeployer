@@ -174,7 +174,7 @@ spec:
             - name: SRCDS_STARTMAP
               value: {{ or .Map "tfdb_octagon_odb_a1" }}
             - name: SRCDS_STATIC_HOSTNAME
-              value: UDL.TF | {{ .Division }} | Match #{{ .MatchID }}
+              value: "UDL.TF | {{ .Division }} | Match #{{ .MatchID }}"
             - name: SRCDS_TOKEN
               value: {{ .SRCDSToken }}
             - name: MATCH_ID
