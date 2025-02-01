@@ -90,6 +90,8 @@ func NewUdlServer(matchID, division, awayTeamID, homeTeamID, awayTeam, homeTeam 
 		HomeTeam:   homeTeam,
 		Password:   password,
 		MatchRound: matchRound,
+		MinPlayers: minPlayers,
+		MaxPlayers: maxPlayers,
 	}, nil
 }
 
