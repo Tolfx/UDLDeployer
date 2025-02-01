@@ -89,7 +89,7 @@ func main() {
 		fmt.Printf("Received score data: %+v\n", scoreData)
 
 		// Update database
-		err = db.UpdateMatchRound(dbConn, scoreData.MatchID, scoreData.WinnerTeamID, scoreData.LoserTeamID, scoreData.WinnerPoints, scoreData.LoserPoints)
+		err = db.UpdateMatchRound(dbConn, scoreData.RoundID, scoreData.WinnerTeamID, scoreData.LoserTeamID, scoreData.WinnerPoints, scoreData.LoserPoints)
 
 		if err != nil {
 			http.Error(w, "Error updating data", http.StatusBadRequest)
