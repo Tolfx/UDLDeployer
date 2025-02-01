@@ -68,7 +68,7 @@ func FetchDivision(db *sql.DB, rosterId int) (string, error) {
 	err := db.QueryRow(`
 	SELECT division_id
 	FROM league_rosters
-	WHERE team_id = $1
+	WHERE id = $1
 	`, rosterId).Scan(&division)
 	if err != nil {
 		return "", err
