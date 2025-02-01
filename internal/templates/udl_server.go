@@ -19,6 +19,8 @@ type UdlServer struct {
 	HomeTeamID string `json:"homeAwayTeamId" db:"home_team_id"`
 	AwayTeam   string `json:"awayTeam"`
 	HomeTeam   string `json:"homeTeam"`
+	MinPlayers int    `json:"minPlayers"`
+	MaxPlayers int    `json:"maxPlayers"`
 	SRCDSToken string `json:"srcdsToken"`
 	Password   string `json:"password"`
 	Map        string `json:"map"`
@@ -73,7 +75,7 @@ func findFreePort(start, end int) (int, error) {
 	return 0, fmt.Errorf("no free ports available in the range %d-%d", start, end)
 }
 
-func NewUdlServer(matchID, division, awayTeamID, homeTeamID, awayTeam, homeTeam string, matchRound int) (*UdlServer, error) {
+func NewUdlServer(matchID, division, awayTeamID, homeTeamID, awayTeam, homeTeam string, matchRound, minPlayers, maxPlayers int) (*UdlServer, error) {
 	password, err := generatePassword(10)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a password: %w", err)
@@ -189,6 +191,10 @@ spec:
               value: "{{ .HomeTeam }}"
             - name: HOME_TEAM_ID
               value: "{{ .HomeTeamID }}"
+            - name: MIN_PLAYERS
+              value: "{{ .MinPlayers }}"
+            - name: MAX_PLAYERS
+              value: "{{ .MaxPlayers }}"
           volumeMounts:
             - mountPath: /home/steam/tf-dedicated/
               name: tf-dedicated

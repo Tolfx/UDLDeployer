@@ -43,6 +43,11 @@ type UserNotification struct {
 	UpdatedAt string
 }
 
+type League struct {
+	MinPlayers int
+	MaxPlayers int
+}
+
 func FetchLeagueMatches(db *sql.DB, statuses []int) ([]Match, error) {
 	query := `
 	SELECT id, home_team_id, away_team_id
@@ -84,6 +89,29 @@ func FetchDivision(db *sql.DB, rosterId int) (string, error) {
 		return "", err
 	}
 	return division, nil
+}
+
+func FetchLeague(db *sql.DB, divisionId string) (*League, error) {
+	var league League
+	var leagueID int
+	err := db.QueryRow(`
+	SELECT league_id
+	FROM league_divisions
+	WHERE id = $1
+	`, divisionId).Scan(&leagueID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.QueryRow(`
+	SELECT min_players, max_players
+	FROM leagues
+	WHERE id = $1
+	`, leagueID).Scan(&league.MinPlayers, &league.MaxPlayers)
+	if err != nil {
+		return nil, err
+	}
+	return &league, nil
 }
 
 func FetchTeamSteamIDs(db *sql.DB, rosterId int) (string, error) {

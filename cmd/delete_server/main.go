@@ -69,6 +69,11 @@ func main() {
 			panic(err)
 		}
 
+		league, err := db.FetchLeague(dbConn, division)
+		if err != nil {
+			panic(err)
+		}
+
 		// Fetch home team steam IDs
 		homeTeamSteamIDs, err := db.FetchTeamSteamIDs(dbConn, match.RosterHomeID)
 		if err != nil {
@@ -90,6 +95,8 @@ func main() {
 				strings.Join(strings.Split(awayTeamSteamIDs, ","), ","),
 				strings.Join(strings.Split(homeTeamSteamIDs, ","), ","),
 				round.ID,
+				league.MinPlayers,
+				league.MaxPlayers,
 			)
 
 			if err != nil {
