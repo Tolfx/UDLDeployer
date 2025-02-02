@@ -214,6 +214,18 @@ func CreateMatchDetails(db *sql.DB, match_id, round_id int, server_ip, port, pas
 	return nil
 }
 
+func DeleteMatchDetails(db *sql.DB, match_id, round_id int) error {
+	query := `
+	DELETE FROM matches_server_details
+	WHERE match_id = $1 AND round_id = $2
+	`
+	_, err := db.Exec(query, match_id, round_id)
+	if err != nil {
+		return fmt.Errorf("failed to delete match details: %w", err)
+	}
+	return nil
+}
+
 func FetchMatchDetails(db *sql.DB, matchID, roundID int) (*MatchDetails, error) {
 	query := `
 	SELECT match_id, server_ip, port, password, map

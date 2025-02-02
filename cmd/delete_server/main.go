@@ -163,6 +163,12 @@ func main() {
 					panic(deleteServiceErr)
 				}
 				fmt.Printf("Service %s deleted successfully.\n", deploymentName)
+
+				err = db.DeleteMatchDetails(dbConn, round.MatchID, round.ID)
+				if err != nil {
+					fmt.Println("Error deleting match details: ", err)
+					panic(err)
+				}
 			}
 		}
 	}
