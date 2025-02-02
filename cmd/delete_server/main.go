@@ -48,7 +48,7 @@ func main() {
 	fmt.Println("Successfully connected to the database!")
 
 	// Fetch league matches
-	matches, err := db.FetchLeagueMatches(dbConn, []int{1, 2, 3})
+	matches, err := db.FetchLeagueMatches(dbConn, []int{0, 1, 2, 3})
 	if err != nil {
 		panic(err)
 	}
@@ -87,6 +87,11 @@ func main() {
 		}
 
 		for _, round := range matchRounds {
+
+			if !round.HasOutcome {
+				continue
+			}
+
 			udlServer, err := templates.NewUdlServer(
 				fmt.Sprintf("%d", match.ID),
 				division,
