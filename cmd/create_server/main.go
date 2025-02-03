@@ -92,6 +92,11 @@ func main() {
 
 		for _, round := range matchRounds {
 
+			if !round.HomeReady || !round.AwayReady {
+				fmt.Printf("Round %d is not ready by both teams, skipping server creation.\n", round.ID)
+				continue
+			}
+
 			udlServer, err := templates.NewUdlServer(
 				fmt.Sprintf("%d", match.ID),
 				division,

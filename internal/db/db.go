@@ -23,6 +23,8 @@ type MatchRound struct {
 	WinnerID        *int
 	HasOutcome      bool
 	ScoreDifference float32
+	HomeReady       bool
+	AwayReady       bool
 }
 
 type MatchDetails struct {
@@ -170,7 +172,7 @@ func FetchTeamUserIDs(db *sql.DB, rosterId int) ([]int, error) {
 
 func FetchMatchRounds(db *sql.DB, matchID int) ([]MatchRound, error) {
 	query := `
-	SELECT id, match_id, map_id, home_team_score, away_team_score, loser_id, winner_id, has_outcome, score_difference
+	SELECT id, match_id, map_id, home_team_score, away_team_score, loser_id, winner_id, has_outcome, score_difference, home_ready, away_ready
 	FROM league_match_rounds
 	WHERE match_id = $1
 	`
@@ -183,7 +185,7 @@ func FetchMatchRounds(db *sql.DB, matchID int) ([]MatchRound, error) {
 	var matchRounds []MatchRound
 	for rows.Next() {
 		var matchRound MatchRound
-		err := rows.Scan(&matchRound.ID, &matchRound.MatchID, &matchRound.MapID, &matchRound.HomeTeamScore, &matchRound.AwayTeamScore, &matchRound.LoserID, &matchRound.WinnerID, &matchRound.HasOutcome, &matchRound.ScoreDifference)
+		err := rows.Scan(&matchRound.ID, &matchRound.MatchID, &matchRound.MapID, &matchRound.HomeTeamScore, &matchRound.AwayTeamScore, &matchRound.LoserID, &matchRound.WinnerID, &matchRound.HasOutcome, &matchRound.ScoreDifference, &matchRound.HomeReady, &matchRound.AwayReady)
 		if err != nil {
 			return nil, err
 		}
