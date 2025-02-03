@@ -90,6 +90,20 @@ func main() {
 
 		fmt.Printf("Received score data: %+v\n", scoreData)
 
+		division, err := db.FetchDivision(dbConn, scoreData.WinnerTeamID)
+		if err != nil {
+			http.Error(w, "Error getting division", http.StatusBadRequest)
+			fmt.Println("Error", err)
+			return
+		}
+
+		league, err := db.FetchLeague(dbConn, division)
+		if err != nil {
+			http.Error(w, "Error getting league", http.StatusBadRequest)
+			fmt.Println("Error", err)
+			return
+		}
+
 		// Update database
 		err = db.UpdateMatchRound(dbConn, scoreData.RoundID, scoreData.WinnerTeamID, scoreData.LoserTeamID, scoreData.HomePoints, scoreData.AwayPoints)
 
@@ -98,6 +112,19 @@ func main() {
 			fmt.Println("Error", err)
 			return
 		}
+
+		var winnerScores, loserScores int
+
+		if scoreData.HomePoints > scoreData.AwayPoints {
+			winnerScores = scoreData.HomePoints
+			loserScores = scoreData.AwayPoints
+		} else {
+			winnerScores = scoreData.AwayPoints
+			loserScores = scoreData.HomePoints
+		}
+
+		_ = db.UpdateRosterPoints(dbConn, *league, scoreData.WinnerTeamID, true, winnerScores)
+		_ = db.UpdateRosterPoints(dbConn, *league, scoreData.LoserTeamID, false, loserScores)
 
 		err = db.UpdateMatchStatus(dbConn, scoreData.MatchID, 3)
 		if err != nil {

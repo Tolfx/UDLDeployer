@@ -44,8 +44,17 @@ type UserNotification struct {
 }
 
 type League struct {
-	MinPlayers int
-	MaxPlayers int
+	MinPlayers           int
+	MaxPlayers           int
+	PointsPerRoundWin    int
+	PointsPerDraw        int
+	PointsPerRoundLoss   int
+	PointsPerMatchWin    int
+	PointsPerMatchLoss   int
+	PointsPerMatchDraw   int
+	PointsPerForfeitWin  int
+	PointsPerForfeitLoss int
+	PointsPerForfeitDraw int
 }
 
 func FetchLeagueMatches(db *sql.DB, statuses []int) ([]Match, error) {
@@ -104,10 +113,10 @@ func FetchLeague(db *sql.DB, divisionId string) (*League, error) {
 	}
 
 	err = db.QueryRow(`
-	SELECT min_players, max_players
+	SELECT min_players, max_players, points_per_round_win, points_per_draw, points_per_round_loss, points_per_match_win, points_per_match_loss, points_per_match_draw, points_per_forfeit_win, points_per_forfeit_loss, points_per_forfeit_draw
 	FROM leagues
 	WHERE id = $1
-	`, leagueID).Scan(&league.MinPlayers, &league.MaxPlayers)
+	`, leagueID).Scan(&league.MinPlayers, &league.MaxPlayers, &league.PointsPerRoundWin, &league.PointsPerDraw, &league.PointsPerRoundLoss, &league.PointsPerMatchWin, &league.PointsPerMatchLoss, &league.PointsPerMatchDraw, &league.PointsPerForfeitWin, &league.PointsPerForfeitLoss, &league.PointsPerForfeitDraw)
 	if err != nil {
 		return nil, err
 	}
@@ -259,6 +268,30 @@ func UpdateMatchRound(db *sql.DB, roundID, winnerID, loserID, homeTeamScore, awa
 	if err != nil {
 		return fmt.Errorf("failed to update match round: %w", err)
 	}
+	return nil
+}
+
+func UpdateRosterPoints(db *sql.DB, league League, rosterId int, isWin bool, scores int) error {
+	var points int
+	if isWin {
+		points = league.PointsPerRoundWin
+	} else {
+		points = league.PointsPerRoundLoss
+	}
+
+	query := `
+	UPDATE league_rosters
+	SET points = points + $1, total_scores = total_scores + $2,
+		total_score_difference = total_score_difference + $3,
+		normalized_round_score = normalized_round_score + $4
+	WHERE id = $5
+	`
+
+	_, err := db.Exec(query, points, scores, scores, scores, rosterId)
+	if err != nil {
+		return fmt.Errorf("failed to update roster points: %w", err)
+	}
+
 	return nil
 }
 
