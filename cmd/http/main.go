@@ -126,11 +126,15 @@ func main() {
 		_ = db.UpdateRosterPoints(dbConn, *league, scoreData.WinnerTeamID, true, winnerScores)
 		_ = db.UpdateRosterPoints(dbConn, *league, scoreData.LoserTeamID, false, loserScores)
 
-		err = db.UpdateMatchStatus(dbConn, scoreData.MatchID, 3)
-		if err != nil {
-			http.Error(w, "Error updating match status", http.StatusBadRequest)
-			fmt.Println("Error", err)
-			return
+		allDone, err := db.AreAllRoundsDone(dbConn, scoreData.MatchID)
+
+		if allDone {
+			err = db.UpdateMatchStatus(dbConn, scoreData.MatchID, 3)
+			if err != nil {
+				http.Error(w, "Error updating match status", http.StatusBadRequest)
+				fmt.Println("Error", err)
+				return
+			}
 		}
 
 		w.WriteHeader(http.StatusOK)

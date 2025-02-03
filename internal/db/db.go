@@ -356,3 +356,18 @@ func SendNotificationsToTeams(db *sql.DB, homeRosterId, awayRosterId int, messag
 
 	return nil
 }
+
+func AreAllRoundsDone(db *sql.DB, matchID int) (bool, error) {
+	query := `
+	SELECT COUNT(*)
+	FROM league_match_rounds
+	WHERE match_id = $1 AND has_outcome = FALSE
+	`
+	var count int
+	err := db.QueryRow(query, matchID).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if all rounds are done: %w", err)
+	}
+
+	return count == 0, nil
+}
