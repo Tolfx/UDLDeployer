@@ -88,6 +88,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
+
 			if existingDetails != nil {
 				fmt.Printf("Match %d Round %d details already exist, skipping...\n", match.ID, round.ID)
 				continue
@@ -123,7 +124,7 @@ func main() {
 			if err != nil {
 				if _, ok := err.(*exec.ExitError); ok {
 					fmt.Printf("Deployment %s does not exist\n", deploymentName)
-					return
+					continue
 				} else {
 					fmt.Println("Error", err)
 					panic(err)
