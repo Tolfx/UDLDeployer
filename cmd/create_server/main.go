@@ -97,6 +97,11 @@ func main() {
 				continue
 			}
 
+			if round.HasOutcome {
+				fmt.Printf("Round %d already has an outcome, skipping server creation.\n", round.ID)
+				continue
+			}
+
 			udlServer, err := templates.NewUdlServer(
 				fmt.Sprintf("%d", match.ID),
 				division,
