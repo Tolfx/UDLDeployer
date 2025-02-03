@@ -273,21 +273,29 @@ func UpdateMatchRound(db *sql.DB, roundID, winnerID, loserID, homeTeamScore, awa
 
 func UpdateRosterPoints(db *sql.DB, league League, rosterId int, isWin bool, scores int) error {
 	var points float32
+	var wonRoundsIncrement, lostRoundsIncrement int
+
 	if isWin {
 		points = league.PointsPerRoundWin
+		wonRoundsIncrement = 1
+		lostRoundsIncrement = 0
 	} else {
 		points = league.PointsPerRoundLoss
+		wonRoundsIncrement = 0
+		lostRoundsIncrement = 1
 	}
 
 	query := `
 	UPDATE league_rosters
 	SET points = points + $1, total_scores = total_scores + $2,
 		total_score_difference = total_score_difference + $3,
-		normalized_round_score = normalized_round_score + $4
-	WHERE id = $5
+		normalized_round_score = normalized_round_score + $4,
+		won_rounds_count = won_rounds_count + $5,
+		lost_rounds_count = lost_rounds_count + $6
+	WHERE id = $7
 	`
 
-	_, err := db.Exec(query, points, scores, scores, scores, rosterId)
+	_, err := db.Exec(query, points, scores, scores, scores, wonRoundsIncrement, lostRoundsIncrement, rosterId)
 	if err != nil {
 		return fmt.Errorf("failed to update roster points: %w", err)
 	}
