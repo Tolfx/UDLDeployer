@@ -46,15 +46,15 @@ type UserNotification struct {
 type League struct {
 	MinPlayers           int
 	MaxPlayers           int
-	PointsPerRoundWin    int
-	PointsPerDraw        int
-	PointsPerRoundLoss   int
-	PointsPerMatchWin    int
-	PointsPerMatchLoss   int
-	PointsPerMatchDraw   int
-	PointsPerForfeitWin  int
-	PointsPerForfeitLoss int
-	PointsPerForfeitDraw int
+	PointsPerRoundWin    float32
+	PointsPerDraw        float32
+	PointsPerRoundLoss   float32
+	PointsPerMatchWin    float32
+	PointsPerMatchLoss   float32
+	PointsPerMatchDraw   float32
+	PointsPerForfeitWin  float32
+	PointsPerForfeitLoss float32
+	PointsPerForfeitDraw float32
 }
 
 func FetchLeagueMatches(db *sql.DB, statuses []int) ([]Match, error) {
@@ -272,7 +272,7 @@ func UpdateMatchRound(db *sql.DB, roundID, winnerID, loserID, homeTeamScore, awa
 }
 
 func UpdateRosterPoints(db *sql.DB, league League, rosterId int, isWin bool, scores int) error {
-	var points int
+	var points float32
 	if isWin {
 		points = league.PointsPerRoundWin
 	} else {
