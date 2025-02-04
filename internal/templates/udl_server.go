@@ -236,6 +236,8 @@ spec:
               value: "{{ .MinPlayers }}"
             - name: MAX_PLAYERS
               value: "{{ .MaxPlayers }}"
+            - name: WIN_LIMIT
+              value: "{{ .WinLimit }}"
           volumeMounts:
             - mountPath: /home/steam/tf-dedicated/
               name: tf-dedicated
@@ -260,19 +262,24 @@ spec:
   selector:
     app: udl
   ports:
-    - protocol: UDP
+		- name: game-udp
+    	protocol: UDP
       port: {{ .Port }}
       targetPort: {{ .Port }}
-    - protocol: TCP
+		- name: game-tcp
+    	protocol: TCP
       port: {{ .Port }}
       targetPort: {{ .Port }}
-    - protocol: UDP
+		- name: sourcetv
+    	protocol: UDP
       port: {{ .SourceTVPort }}
       targetPort: {{ .SourceTVPort }}
-    - protocol: UDP
+		- name: clientport
+    	protocol: UDP
       port: {{ .ClientPort }}
       targetPort: {{ .ClientPort }}
-    - protocol: UDP
+		- name: steamport
+    	protocol: UDP
       port: {{ .SteamPort }}
       targetPort: {{ .SteamPort }}
   type: NodePort
