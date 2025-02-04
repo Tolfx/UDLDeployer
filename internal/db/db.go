@@ -11,6 +11,7 @@ type Match struct {
 	ID           int
 	RosterAwayID int
 	RosterHomeID int
+	WinLimit     int
 }
 
 type MatchRound struct {
@@ -61,7 +62,7 @@ type League struct {
 
 func FetchLeagueMatches(db *sql.DB, statuses []int) ([]Match, error) {
 	query := `
-	SELECT id, home_team_id, away_team_id
+	SELECT id, home_team_id, away_team_id, win_limit
 	FROM league_matches
 	WHERE status = ANY($1) AND home_team_id IS NOT NULL AND away_team_id IS NOT NULL
 	`
@@ -74,7 +75,7 @@ func FetchLeagueMatches(db *sql.DB, statuses []int) ([]Match, error) {
 	var matches []Match
 	for rows.Next() {
 		var match Match
-		err := rows.Scan(&match.ID, &match.RosterHomeID, &match.RosterAwayID)
+		err := rows.Scan(&match.ID, &match.RosterHomeID, &match.RosterAwayID, &match.WinLimit)
 		if err != nil {
 			return nil, err
 		}

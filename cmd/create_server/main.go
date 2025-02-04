@@ -114,6 +114,8 @@ func main() {
 				league.MaxPlayers,
 			)
 
+			udlServer.SetWinLimit(match.WinLimit)
+
 			if err != nil {
 				fmt.Println("Failed to create udl server template")
 				panic(err)

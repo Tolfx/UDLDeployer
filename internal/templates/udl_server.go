@@ -12,20 +12,24 @@ import (
 )
 
 type UdlServer struct {
-	MatchID    string `json:"matchId" db:"match_id"`
-	MatchRound int    `json:"matchRound"`
-	Division   string `json:"division" db:"division"`
-	AwayTeamID string `json:"awayTeamId" db:"away_team_id"`
-	HomeTeamID string `json:"homeAwayTeamId" db:"home_team_id"`
-	AwayTeam   string `json:"awayTeam"`
-	HomeTeam   string `json:"homeTeam"`
-	MinPlayers int    `json:"minPlayers"`
-	MaxPlayers int    `json:"maxPlayers"`
-	SRCDSToken string `json:"srcdsToken"`
-	Password   string `json:"password"`
-	Map        string `json:"map"`
-	Port       int    `json:"port"`
-	RCON       string `json:"rcon"`
+	MatchID      string `json:"matchId" db:"match_id"`
+	MatchRound   int    `json:"matchRound"`
+	Division     string `json:"division" db:"division"`
+	AwayTeamID   string `json:"awayTeamId" db:"away_team_id"`
+	HomeTeamID   string `json:"homeAwayTeamId" db:"home_team_id"`
+	WinLimit     int    `json:"winLimit" db:"win_limit"`
+	AwayTeam     string `json:"awayTeam"`
+	HomeTeam     string `json:"homeTeam"`
+	MinPlayers   int    `json:"minPlayers"`
+	MaxPlayers   int    `json:"maxPlayers"`
+	SRCDSToken   string `json:"srcdsToken"`
+	Password     string `json:"password"`
+	Map          string `json:"map"`
+	Port         int    `json:"port"`
+	RCON         string `json:"rcon"`
+	SourceTVPort int    `json:"sourceTVPort"`
+	ClientPort   int    `json:"clientPort"`
+	SteamPort    int    `json:"steamPort"`
 }
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -61,12 +65,7 @@ func getUsedPorts() (map[int]bool, error) {
 	return usedPorts, nil
 }
 
-func findFreePort(start, end int) (int, error) {
-	usedPorts, err := getUsedPorts()
-	if err != nil {
-		return 0, err
-	}
-
+func findFreePort(start, end int, usedPorts map[int]bool) (int, error) {
 	for port := start; port <= end; port++ {
 		if !usedPorts[port] {
 			return port, nil
@@ -99,6 +98,10 @@ func (u *UdlServer) GetName() string {
 	return fmt.Sprintf("udl-%s-%d", u.MatchID, u.MatchRound)
 }
 
+func (u *UdlServer) SetWinLimit(winLimit int) {
+	u.WinLimit = winLimit
+}
+
 func (u *UdlServer) SetSRCDSToken(token string) {
 	u.SRCDSToken = token
 }
@@ -109,12 +112,34 @@ func (u *UdlServer) SetMap(mapStr string) {
 
 func (u *UdlServer) RenderTemplate() (string, error) {
 
-	port, err := findFreePort(30015, 30100)
+	usedPorts, err := getUsedPorts()
+	if err != nil {
+		return "", fmt.Errorf("failed to get used ports: %w", err)
+	}
+
+	port, err := findFreePort(30015, 30100, usedPorts)
 	if err != nil {
 		return "", fmt.Errorf("failed to find a free port: %w", err)
 	}
-
 	u.Port = port
+
+	sourceTVPort, err := findFreePort(30101, 30200, usedPorts)
+	if err != nil {
+		return "", fmt.Errorf("failed to find a free SourceTV port: %w", err)
+	}
+	u.SourceTVPort = sourceTVPort
+
+	clientPort, err := findFreePort(30201, 30300, usedPorts)
+	if err != nil {
+		return "", fmt.Errorf("failed to find a free client port: %w", err)
+	}
+	u.ClientPort = clientPort
+
+	steamPort, err := findFreePort(30301, 30400, usedPorts)
+	if err != nil {
+		return "", fmt.Errorf("failed to find a free steam port: %w", err)
+	}
+	u.SteamPort = steamPort
 
 	rconPassword, err := generatePassword(46)
 	if err != nil {
@@ -166,6 +191,14 @@ spec:
           ports:
             - containerPort: {{ .Port }}
               protocol: UDP
+            - containerPort: {{ .Port }}
+              protocol: TCP
+            - containerPort: {{ .SourceTVPort }}
+              protocol: UDP
+            - containerPort: {{ .ClientPort }}
+              protocol: UDP
+            - containerPort: {{ .SteamPort }}
+              protocol: UDP
           env:
             - name: SRCDS_PORT
               value: "{{ .Port }}"
@@ -181,6 +214,12 @@ spec:
               value: "UDL.TF | {{ .Division }} | Match #{{ .MatchID }}"
             - name: SRCDS_TOKEN
               value: {{ .SRCDSToken }}
+            - name: SRCDS_TV_PORT
+              value: "{{ .SourceTVPort }}"
+            - name: SRCDS_CLIENT_PORT
+              value: "{{ .ClientPort }}"
+            - name: SRCDS_STEAM_PORT
+              value: "{{ .SteamPort }}"
             - name: MATCH_ID
               value: "{{ .MatchID }}"
             - name: ROUND_ID
@@ -224,5 +263,17 @@ spec:
     - protocol: UDP
       port: {{ .Port }}
       targetPort: {{ .Port }}
+    - protocol: TCP
+      port: {{ .Port }}
+      targetPort: {{ .Port }}
+    - protocol: UDP
+      port: {{ .SourceTVPort }}
+      targetPort: {{ .SourceTVPort }}
+    - protocol: UDP
+      port: {{ .ClientPort }}
+      targetPort: {{ .ClientPort }}
+    - protocol: UDP
+      port: {{ .SteamPort }}
+      targetPort: {{ .SteamPort }}
   type: NodePort
 `
