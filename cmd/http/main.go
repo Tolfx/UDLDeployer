@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strings"
 
 	"github.com/Tolfx/UDLDeployer/internal/db"
 	"github.com/joho/godotenv"
@@ -126,9 +125,11 @@ func main() {
 		_ = db.UpdateRosterPoints(dbConn, *league, scoreData.WinnerTeamID, true, winnerScores)
 		_ = db.UpdateRosterPoints(dbConn, *league, scoreData.LoserTeamID, false, loserScores)
 
-		allDone, err := db.AreAllRoundsDone(dbConn, scoreData.MatchID)
+		allDone, _ := db.AreAllRoundsDone(dbConn, scoreData.MatchID)
 
 		if allDone {
+			_ = db.UpdateMatchPoints(dbConn, *league, true, scoreData.WinnerTeamID)
+			_ = db.UpdateMatchPoints(dbConn, *league, false, scoreData.LoserTeamID)
 			err = db.UpdateMatchStatus(dbConn, scoreData.MatchID, 3)
 			if err != nil {
 				http.Error(w, "Error updating match status", http.StatusBadRequest)
@@ -251,11 +252,6 @@ func main() {
 	if err := http.ListenAndServe(":"+serverPort, nil); err != nil {
 		panic(err)
 	}
-}
-
-// Helper function to check if a string contains a substring
-func contains(str, substr string) bool {
-	return strings.Contains(str, substr)
 }
 
 // Helper function to check if a string matches a regex pattern

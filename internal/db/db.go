@@ -306,6 +306,29 @@ func UpdateRosterPoints(db *sql.DB, league League, rosterId int, isWin bool, sco
 	return nil
 }
 
+func UpdateMatchPoints(db *sql.DB, league League, isWin bool, rosterId int) error {
+	var points float32
+
+	if isWin {
+		points = league.PointsPerMatchWin
+	} else {
+		points = league.PointsPerMatchLoss
+	}
+
+	query := `
+	UPDATE league_matches
+	SET points = points + $1
+	WHERE id = $2
+	`
+
+	_, err := db.Exec(query, points, rosterId)
+	if err != nil {
+		return fmt.Errorf("failed to update match points: %w", err)
+	}
+
+	return nil
+}
+
 func UpdateMatchStatus(db *sql.DB, matchID int, status int) error {
 	query := `
 	UPDATE league_matches
