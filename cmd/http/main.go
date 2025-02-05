@@ -23,6 +23,22 @@ type ScoreData struct {
 	HomePoints   int `json:"home_points"`
 }
 
+func updateScores(matchID int) error {
+	updateScoresURL := fmt.Sprintf("https://udl.tf/leagues/matches/%d/update_scores", matchID)
+	req, err := http.NewRequest(http.MethodPost, updateScoresURL, nil)
+	if err != nil {
+		return fmt.Errorf("error creating request to update scores: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error updating scores: %w", err)
+	}
+	return nil
+}
+
 func main() {
 	// Load .env file
 	err := godotenv.Load()
@@ -89,20 +105,6 @@ func main() {
 
 		fmt.Printf("Received score data: %+v\n", scoreData)
 
-		division, err := db.FetchDivision(dbConn, scoreData.WinnerTeamID)
-		if err != nil {
-			http.Error(w, "Error getting division", http.StatusBadRequest)
-			fmt.Println("Error", err)
-			return
-		}
-
-		league, err := db.FetchLeague(dbConn, division)
-		if err != nil {
-			http.Error(w, "Error getting league", http.StatusBadRequest)
-			fmt.Println("Error", err)
-			return
-		}
-
 		// Update database
 		err = db.UpdateMatchRound(dbConn, scoreData.RoundID, scoreData.WinnerTeamID, scoreData.LoserTeamID, scoreData.HomePoints, scoreData.AwayPoints)
 
@@ -112,27 +114,23 @@ func main() {
 			return
 		}
 
-		var winnerScores, loserScores int
-
-		if scoreData.HomePoints > scoreData.AwayPoints {
-			winnerScores = scoreData.HomePoints
-			loserScores = scoreData.AwayPoints
-		} else {
-			winnerScores = scoreData.AwayPoints
-			loserScores = scoreData.HomePoints
+		if err := updateScores(scoreData.MatchID); err != nil {
+			http.Error(w, "Error updating scores", http.StatusInternalServerError)
+			fmt.Println("Error", err)
+			return
 		}
-
-		_ = db.UpdateRosterPoints(dbConn, *league, scoreData.WinnerTeamID, true, winnerScores)
-		_ = db.UpdateRosterPoints(dbConn, *league, scoreData.LoserTeamID, false, loserScores)
 
 		allDone, _ := db.AreAllRoundsDone(dbConn, scoreData.MatchID)
 
 		if allDone {
-			_ = db.UpdateMatchPoints(dbConn, *league, true, scoreData.WinnerTeamID)
-			_ = db.UpdateMatchPoints(dbConn, *league, false, scoreData.LoserTeamID)
 			err = db.UpdateMatchStatus(dbConn, scoreData.MatchID, 3)
 			if err != nil {
 				http.Error(w, "Error updating match status", http.StatusBadRequest)
+				fmt.Println("Error", err)
+				return
+			}
+			if err := updateScores(scoreData.MatchID); err != nil {
+				http.Error(w, "Error updating scores", http.StatusInternalServerError)
 				fmt.Println("Error", err)
 				return
 			}
