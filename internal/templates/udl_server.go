@@ -262,24 +262,24 @@ spec:
   selector:
     app: udl
   ports:
-		- name: game-udp
-    	protocol: UDP
+    - name: game-udp
+      protocol: UDP
       port: {{ .Port }}
       targetPort: {{ .Port }}
-		- name: game-tcp
-    	protocol: TCP
+    - name: game-tcp
+      protocol: TCP
       port: {{ .Port }}
       targetPort: {{ .Port }}
-		- name: sourcetv
-    	protocol: UDP
+    - name: sourcetv
+      protocol: UDP
       port: {{ .SourceTVPort }}
       targetPort: {{ .SourceTVPort }}
-		- name: clientport
-    	protocol: UDP
+    - name: clientport
+      protocol: UDP
       port: {{ .ClientPort }}
       targetPort: {{ .ClientPort }}
-		- name: steamport
-    	protocol: UDP
+    - name: steamport
+      protocol: UDP
       port: {{ .SteamPort }}
       targetPort: {{ .SteamPort }}
   type: NodePort
