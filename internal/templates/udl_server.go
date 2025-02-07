@@ -206,6 +206,8 @@ spec:
               value: "{{ .Password }}"
             - name: SRCDS_MAXPLAYERS
               value: "12"
+            - name: SRCDS_TICKRATE
+              value: '128'
             - name: SRCDS_RCONPW
               value: "{{ .RCON }}"
             - name: SRCDS_STARTMAP
