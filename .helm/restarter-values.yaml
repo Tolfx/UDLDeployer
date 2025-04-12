@@ -23,6 +23,9 @@ spec:
               name: restarter-udl
               terminationMessagePath: /dev/termination-log
               terminationMessagePolicy: File
+              securityContext:
+                runAsUser: 0
+                runAsGroup: 1000
           dnsPolicy: ClusterFirst
           restartPolicy: Never
           schedulerName: default-scheduler

@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udl-http-server
+  namespace: udl
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: udl-http-server
+  template:
+    metadata:
+      labels:
+        app: udl-http-server
+    spec:
+      containers:
+      - name: udl-http-server
+        image: ghcr.io/dodgeball-tf/udlscripts:latest
+        imagePullPolicy: Always
+        command: ["bin/http"]
+        ports:
+        - containerPort: 5823
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: udl-secrets
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: udl-secrets
+              key: DB_PORT
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: udl-secrets
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: udl-secrets
+              key: DB_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: udl-secrets
+              key: DB_NAME
+        - name: STEAM_WEB_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: udl-secrets
+              key: STEAM_WEB_API_KEY
+        - name: SECRET_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: udl-secrets
+              key: SECRET_PASSWORD
+        - name: DEMO_PATH
+          value: "/tf/udl/tf/demos"
+        volumeMounts:
+        - name: demo-volume
+          mountPath: /tf/udl/tf/demos
+      volumes:
+      - name: demo-volume
+        hostPath:
+          path: /tf/udl/tf/demos
+          type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: udl-http-server
+  namespace: udl
+spec:
+  selector:
+    app: udl-http-server
+  ports:
+  - protocol: TCP
+    port: 5823
+    targetPort: 5823
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: udl-http-server
+  namespace: udl
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: "letsencrypt"
+spec:
+  rules:
+  - host: api.udl.tf
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: udl-http-server
+            port:
+              number: 5823
+  tls:
+  - hosts:
+    - api.udl.tf
+    secretName: udl-http-server-tls
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: udl-http-server-tls
+  namespace: udl
+spec:
+  secretName: udl-http-server-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: api.udl.tf
+  dnsNames:
+  - api.udl.tf

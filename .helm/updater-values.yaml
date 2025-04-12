@@ -15,6 +15,14 @@ spec:
           creationTimestamp: null
         spec:
           affinity: {}
+          initContainers:
+            - name: init-permissions
+              image: busybox
+              command:
+                ['sh', '-c', 'chown -R 1000:1000 /home/steam/tf-dedicated']
+              volumeMounts:
+                - mountPath: /home/steam/tf-dedicated
+                  name: tf-data
           containers:
             - name: update-manager-udl
               env:
@@ -42,7 +50,7 @@ spec:
           terminationGracePeriodSeconds: 30
           volumes:
             - hostPath:
-                path: /home/udl
+                path: /tf/udl
                 type: ''
               name: tf-data
   schedule: 0/30 * * * *
