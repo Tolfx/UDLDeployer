@@ -1,4 +1,4 @@
-FROM bitnami/kubectl:1.20.9 as kubectl
+FROM bitnami/kubectl:latest as kubectl
 
 # Use the official Golang image as the base image
 FROM golang:1.23.3
