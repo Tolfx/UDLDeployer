@@ -49,18 +49,21 @@ func main() {
 	// Fetch league matches
 	matches, err := db.FetchLeagueMatches(dbConn, []int{0})
 	if err != nil {
+		fmt.Println("Failed to get league matches")
 		panic(err)
 	}
 
 	for _, match := range matches {
 		matchRounds, err := db.FetchMatchRounds(dbConn, match.ID)
 		if err != nil {
+			fmt.Println("Failed to get match rounds")
 			panic(err)
 		}
 
 		// Fetch division for home team
 		division, err := db.FetchDivision(dbConn, match.RosterHomeID)
 		if err != nil {
+			fmt.Println("Failed to get division")
 			panic(err)
 		}
 
