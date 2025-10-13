@@ -268,26 +268,26 @@ spec:
       protocol: UDP
       port: {{ .Port }}
       targetPort: {{ .Port }}
-			nodePort: {{ .Port }}
+      nodePort: {{ .Port }}
     - name: game-tcp
       protocol: TCP
       port: {{ .Port }}
       targetPort: {{ .Port }}
-			nodePort: {{ .Port }}
+      nodePort: {{ .Port }}
     - name: sourcetv
       protocol: UDP
       port: {{ .SourceTVPort }}
       targetPort: {{ .SourceTVPort }}
-			nodePort: {{ .SourceTVPort }}
+      nodePort: {{ .SourceTVPort }}
     - name: clientport
       protocol: UDP
       port: {{ .ClientPort }}
       targetPort: {{ .ClientPort }}
-			nodePort: {{ .ClientPort }}
+      nodePort: {{ .ClientPort }}
     - name: steamport
       protocol: UDP
       port: {{ .SteamPort }}
       targetPort: {{ .SteamPort }}
-			nodePort: {{ .SteamPort }}
+      nodePort: {{ .SteamPort }}
   type: NodePort
 `
