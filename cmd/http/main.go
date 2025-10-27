@@ -40,6 +40,7 @@ func updateScores(matchID int) error {
 }
 
 func main() {
+
 	// Load .env file
 	err := godotenv.Load()
 	if err != nil {
@@ -242,6 +243,87 @@ func main() {
 		// Set the original file name in the response header
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", demoFile))
 		http.ServeFile(w, r, fmt.Sprintf("%s/%s", uploadPath, demoFile))
+	})
+
+	// POST /player-match-statistics: Upsert player match statistics
+	http.HandleFunc("/player-match-statistics", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+		querySecretPassword := r.URL.Query().Get("secret_password")
+		if querySecretPassword != secretPassword {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		type reqBody struct {
+			SteamID          int64 `json:"steam_id"`
+			LeagueMatchID    int64 `json:"league_match_id"`
+			Kills            int   `json:"kills"`
+			Deaths           int   `json:"deaths"`
+			Deflects         int   `json:"deflects"`
+			TimeAliveSeconds int   `json:"time_alive_seconds"`
+		}
+		var body reqBody
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "Error parsing JSON data", http.StatusBadRequest)
+			return
+		}
+		stat := db.PlayerMatchStatistic{
+			SteamID:          body.SteamID,
+			LeagueMatchID:    body.LeagueMatchID,
+			Kills:            body.Kills,
+			Deaths:           body.Deaths,
+			Deflects:         body.Deflects,
+			TimeAliveSeconds: body.TimeAliveSeconds,
+		}
+		if err := db.UpsertPlayerMatchStatistic(dbConn, stat); err != nil {
+			http.Error(w, "Error upserting player match statistic", http.StatusInternalServerError)
+			fmt.Println("Error:", err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Player match statistic upserted"))
+	})
+
+	// POST /player-chat-logs: Batch insert player chat logs
+	http.HandleFunc("/player-chat-logs", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+		querySecretPassword := r.URL.Query().Get("secret_password")
+		if querySecretPassword != secretPassword {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		type chatLog struct {
+			SteamID       int64  `json:"steam_id"`
+			LeagueMatchID int64  `json:"league_match_id"`
+			Message       string `json:"message"`
+			SentAt        string `json:"sent_at"` // ISO8601 string
+		}
+		var logs []chatLog
+		if err := json.NewDecoder(r.Body).Decode(&logs); err != nil {
+			http.Error(w, "Error parsing JSON data", http.StatusBadRequest)
+			return
+		}
+		dbLogs := make([]db.PlayerChatLog, 0, len(logs))
+		for _, l := range logs {
+			dbLogs = append(dbLogs, db.PlayerChatLog{
+				SteamID:       l.SteamID,
+				LeagueMatchID: l.LeagueMatchID,
+				Message:       l.Message,
+				SentAt:        l.SentAt,
+			})
+		}
+		if err := db.InsertPlayerChatLogs(dbConn, dbLogs); err != nil {
+			http.Error(w, "Error inserting player chat logs", http.StatusInternalServerError)
+			fmt.Println("Error:", err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Player chat logs inserted"))
 	})
 
 	serverPort := "5823"

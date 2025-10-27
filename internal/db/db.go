@@ -7,6 +7,77 @@ import (
 	"github.com/lib/pq"
 )
 
+// PlayerMatchStatistic represents a row in player_match_statistics
+type PlayerMatchStatistic struct {
+	SteamID          int64
+	LeagueMatchID    int64
+	Kills            int
+	Deaths           int
+	Deflects         int
+	TimeAliveSeconds int
+}
+
+// PlayerChatLog represents a row in player_chat_logs
+type PlayerChatLog struct {
+	SteamID       int64
+	LeagueMatchID int64
+	Message       string
+	SentAt        string // ISO8601 string, e.g. "2025-10-27T12:34:56Z"
+}
+
+// UpsertPlayerMatchStatistic inserts or updates a player's match statistics
+func UpsertPlayerMatchStatistic(db *sql.DB, stat PlayerMatchStatistic) error {
+	query := `
+		INSERT INTO player_match_statistics (
+			steam_id, league_match_id, kills, deaths, deflects, time_alive_seconds, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+		ON CONFLICT (steam_id, league_match_id) DO UPDATE SET
+			kills = EXCLUDED.kills,
+			deaths = EXCLUDED.deaths,
+			deflects = EXCLUDED.deflects,
+			time_alive_seconds = EXCLUDED.time_alive_seconds,
+			updated_at = NOW();
+	`
+	_, err := db.Exec(query, stat.SteamID, stat.LeagueMatchID, stat.Kills, stat.Deaths, stat.Deflects, stat.TimeAliveSeconds)
+	if err != nil {
+		return fmt.Errorf("failed to upsert player match statistic: %w", err)
+	}
+	return nil
+}
+
+// InsertPlayerChatLogs inserts one or more chat logs (batch insert)
+func InsertPlayerChatLogs(db *sql.DB, logs []PlayerChatLog) error {
+	if len(logs) == 0 {
+		return nil
+	}
+	query := `INSERT INTO player_chat_logs (steam_id, league_match_id, message, sent_at, created_at, updated_at) VALUES `
+	args := []interface{}{}
+	placeholders := []string{}
+	for i, log := range logs {
+		idx := i * 6
+		placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, NOW(), NOW())", idx+1, idx+2, idx+3, idx+4))
+		args = append(args, log.SteamID, log.LeagueMatchID, log.Message, log.SentAt)
+	}
+	query += fmt.Sprintf("%s;", joinStrings(placeholders, ", "))
+	_, err := db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to insert player chat logs: %w", err)
+	}
+	return nil
+}
+
+// joinStrings is a helper for joining string slices (no import for strings)
+func joinStrings(arr []string, sep string) string {
+	if len(arr) == 0 {
+		return ""
+	}
+	out := arr[0]
+	for i := 1; i < len(arr); i++ {
+		out += sep + arr[i]
+	}
+	return out
+}
+
 type Match struct {
 	ID           int
 	RosterAwayID int
