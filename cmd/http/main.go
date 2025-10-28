@@ -277,6 +277,10 @@ func main() {
 			Deflects:         body.Deflects,
 			TimeAliveSeconds: body.TimeAliveSeconds,
 		}
+
+		fmt.Printf("Upserting player match statistic: SteamID=%d, LeagueMatchID=%d, Kills=%d, Deaths=%d, Deflects=%d, TimeAliveSeconds=%d\n",
+			stat.SteamID, stat.LeagueMatchID, stat.Kills, stat.Deaths, stat.Deflects, stat.TimeAliveSeconds)
+
 		if err := db.UpsertPlayerMatchStatistic(dbConn, stat); err != nil {
 			http.Error(w, "Error upserting player match statistic", http.StatusInternalServerError)
 			fmt.Println("Error:", err)
@@ -317,6 +321,11 @@ func main() {
 				SentAt:        l.SentAt,
 			})
 		}
+
+		for i, log := range dbLogs {
+			fmt.Printf("ChatLog %d: SteamID=%d, LeagueMatchID=%d, Message=%q, SentAt=%s\n", i, log.SteamID, log.LeagueMatchID, log.Message, log.SentAt)
+		}
+
 		if err := db.InsertPlayerChatLogs(dbConn, dbLogs); err != nil {
 			http.Error(w, "Error inserting player chat logs", http.StatusInternalServerError)
 			fmt.Println("Error:", err)
