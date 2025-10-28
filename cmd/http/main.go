@@ -14,6 +14,17 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// JSON response helpers
+func writeJSONResponse(w http.ResponseWriter, status int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(payload)
+}
+
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+	writeJSONResponse(w, status, map[string]string{"error": message})
+}
+
 type ScoreData struct {
 	MatchID      int `json:"match_id"`
 	RoundID      int `json:"round_id"`
@@ -81,26 +92,25 @@ func main() {
 
 	// Set up HTTP server
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("API is up and running"))
+		writeJSONResponse(w, http.StatusOK, map[string]string{"status": "API is up and running"})
 	})
 
 	http.HandleFunc("/send-scores", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			writeJSONError(w, http.StatusMethodNotAllowed, "Invalid request method")
 			return
 		}
 
 		querySecretPassword := r.URL.Query().Get("secret_password")
 		if querySecretPassword != secretPassword {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "Unauthorized")
 			return
 		}
 
 		var scoreData ScoreData
 		err := json.NewDecoder(r.Body).Decode(&scoreData)
 		if err != nil {
-			http.Error(w, "Error parsing JSON data", http.StatusBadRequest)
+			writeJSONError(w, http.StatusBadRequest, "Error parsing JSON data")
 			return
 		}
 
@@ -110,13 +120,13 @@ func main() {
 		err = db.UpdateMatchRound(dbConn, scoreData.RoundID, scoreData.WinnerTeamID, scoreData.LoserTeamID, scoreData.HomePoints, scoreData.AwayPoints)
 
 		if err != nil {
-			http.Error(w, "Error updating data", http.StatusBadRequest)
+			writeJSONError(w, http.StatusBadRequest, "Error updating data")
 			fmt.Println("Error", err)
 			return
 		}
 
 		if err := updateScores(scoreData.MatchID); err != nil {
-			http.Error(w, "Error updating scores", http.StatusInternalServerError)
+			writeJSONError(w, http.StatusInternalServerError, "Error updating scores")
 			fmt.Println("Error", err)
 			return
 		}
@@ -126,36 +136,35 @@ func main() {
 		if allDone {
 			err = db.UpdateMatchStatus(dbConn, scoreData.MatchID, 3)
 			if err != nil {
-				http.Error(w, "Error updating match status", http.StatusBadRequest)
+				writeJSONError(w, http.StatusBadRequest, "Error updating match status")
 				fmt.Println("Error", err)
 				return
 			}
 			if err := updateScores(scoreData.MatchID); err != nil {
-				http.Error(w, "Error updating scores", http.StatusInternalServerError)
+				writeJSONError(w, http.StatusInternalServerError, "Error updating scores")
 				fmt.Println("Error", err)
 				return
 			}
 		}
 
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Score data received"))
+		writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Score data received"})
 	})
 
 	http.HandleFunc("/upload-demo", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			writeJSONError(w, http.StatusMethodNotAllowed, "Invalid request method")
 			return
 		}
 
 		querySecretPassword := r.URL.Query().Get("secret_password")
 		if querySecretPassword != secretPassword {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "Unauthorized")
 			return
 		}
 
 		file, header, err := r.FormFile("file")
 		if err != nil {
-			http.Error(w, "Error retrieving the file", http.StatusBadRequest)
+			writeJSONError(w, http.StatusBadRequest, "Error retrieving the file")
 			return
 		}
 		defer file.Close()
@@ -168,7 +177,7 @@ func main() {
 		if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
 			err = os.Mkdir(uploadPath, os.ModePerm)
 			if err != nil {
-				http.Error(w, "Error creating upload directory", http.StatusInternalServerError)
+				writeJSONError(w, http.StatusInternalServerError, "Error creating upload directory")
 				return
 			}
 		}
@@ -176,7 +185,7 @@ func main() {
 		// Create a file in the upload directory with the same name as the uploaded file
 		dst, err := os.Create(fmt.Sprintf("%s/%s", uploadPath, header.Filename))
 		if err != nil {
-			http.Error(w, "Error creating the file", http.StatusInternalServerError)
+			writeJSONError(w, http.StatusInternalServerError, "Error creating the file")
 			return
 		}
 		defer dst.Close()
@@ -184,24 +193,23 @@ func main() {
 		// Copy the uploaded file to the destination file
 		_, err = io.Copy(dst, file)
 		if err != nil {
-			http.Error(w, "Error saving the file", http.StatusInternalServerError)
+			writeJSONError(w, http.StatusInternalServerError, "Error saving the file")
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Demo file uploaded successfully"))
+		writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Demo file uploaded successfully"})
 	})
 
 	http.HandleFunc("/get-demo", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			writeJSONError(w, http.StatusMethodNotAllowed, "Invalid request method")
 			return
 		}
 
 		matchID := r.URL.Query().Get("match_id")
 		roundID := r.URL.Query().Get("round_id")
 		if matchID == "" || roundID == "" {
-			http.Error(w, "Missing match_id or round_id", http.StatusBadRequest)
+			writeJSONError(w, http.StatusBadRequest, "Missing match_id or round_id")
 			return
 		}
 
@@ -214,7 +222,7 @@ func main() {
 		filePattern := fmt.Sprintf(`match-%s-round-%s`, matchID, roundID)
 		files, err := os.ReadDir(uploadPath)
 		if err != nil {
-			http.Error(w, "Error reading demo directory", http.StatusInternalServerError)
+			writeJSONError(w, http.StatusInternalServerError, "Error reading demo directory")
 			return
 		}
 
@@ -234,7 +242,7 @@ func main() {
 		}
 
 		if demoFile == "" {
-			http.Error(w, "Demo file not found", http.StatusNotFound)
+			writeJSONError(w, http.StatusNotFound, "Demo file not found")
 			return
 		}
 
@@ -248,12 +256,12 @@ func main() {
 	// POST /player-match-statistics: Upsert player match statistics
 	http.HandleFunc("/player-match-statistics", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			writeJSONError(w, http.StatusMethodNotAllowed, "Invalid request method")
 			return
 		}
 		querySecretPassword := r.URL.Query().Get("secret_password")
 		if querySecretPassword != secretPassword {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "Unauthorized")
 			return
 		}
 		type reqBody struct {
@@ -266,7 +274,7 @@ func main() {
 		}
 		var body reqBody
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			http.Error(w, "Error parsing JSON data", http.StatusBadRequest)
+			writeJSONError(w, http.StatusBadRequest, "Error parsing JSON data")
 			return
 		}
 		stat := db.PlayerMatchStatistic{
@@ -282,23 +290,22 @@ func main() {
 			stat.SteamID, stat.LeagueMatchID, stat.Kills, stat.Deaths, stat.Deflects, stat.TimeAliveSeconds)
 
 		if err := db.UpsertPlayerMatchStatistic(dbConn, stat); err != nil {
-			http.Error(w, "Error upserting player match statistic", http.StatusInternalServerError)
+			writeJSONError(w, http.StatusInternalServerError, "Error upserting player match statistic")
 			fmt.Println("Error:", err)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Player match statistic upserted"))
+		writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Player match statistic upserted"})
 	})
 
 	// POST /player-chat-logs: Batch insert player chat logs
 	http.HandleFunc("/player-chat-logs", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+			writeJSONError(w, http.StatusMethodNotAllowed, "Invalid request method")
 			return
 		}
 		querySecretPassword := r.URL.Query().Get("secret_password")
 		if querySecretPassword != secretPassword {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "Unauthorized")
 			return
 		}
 		type chatLog struct {
@@ -309,7 +316,7 @@ func main() {
 		}
 		var logs []chatLog
 		if err := json.NewDecoder(r.Body).Decode(&logs); err != nil {
-			http.Error(w, "Error parsing JSON data", http.StatusBadRequest)
+			writeJSONError(w, http.StatusBadRequest, "Error parsing JSON data")
 			return
 		}
 		dbLogs := make([]db.PlayerChatLog, 0, len(logs))
@@ -327,12 +334,11 @@ func main() {
 		}
 
 		if err := db.InsertPlayerChatLogs(dbConn, dbLogs); err != nil {
-			http.Error(w, "Error inserting player chat logs", http.StatusInternalServerError)
+			writeJSONError(w, http.StatusInternalServerError, "Error inserting player chat logs")
 			fmt.Println("Error:", err)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Player chat logs inserted"))
+		writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Player chat logs inserted"})
 	})
 
 	serverPort := "5823"
