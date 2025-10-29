@@ -174,9 +174,18 @@ func main() {
 			}
 			password := strings.TrimSpace(string(passwordOutput))
 
+			// Get sourcetvport
+			cmd = exec.Command("kubectl", "get", "deployment", deploymentName, "-n", "udl", "-o", "jsonpath={.spec.template.spec.containers[0].env[?(@.name=='SRCDS_TV_PORT')].value}")
+			sourcetvportOutput, err := cmd.Output()
+			if err != nil {
+				fmt.Println("Error getting password:", err)
+				panic(err)
+			}
+			sourcetvport := strings.TrimSpace(string(sourcetvportOutput))
+
 			fmt.Printf("Match %d Round %d is running on %s:%s with password %s\n", match.ID, round.ID, nodeIP, nodePort, password)
 
-			err = db.CreateMatchDetails(dbConn, match.ID, round.ID, nodeIP, nodePort, password, *mapName)
+			err = db.CreateMatchDetails(dbConn, match.ID, round.ID, nodeIP, nodePort, sourcetvport, password, *mapName)
 			if err != nil {
 				fmt.Println("Error setting match details:", err)
 				panic(err)

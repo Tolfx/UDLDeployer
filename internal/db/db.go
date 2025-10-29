@@ -100,11 +100,12 @@ type MatchRound struct {
 }
 
 type MatchDetails struct {
-	MatchID  int
-	ServerIP string
-	Port     string
-	Password string
-	Map      string
+	MatchID      int
+	ServerIP     string
+	Port         string
+	Password     string
+	Map          string
+	SourceTVPort string
 }
 
 type UserNotification struct {
@@ -285,12 +286,12 @@ func FetchMapName(db *sql.DB, mapId int) (*string, error) {
 	return &mapName, nil
 }
 
-func CreateMatchDetails(db *sql.DB, match_id, round_id int, server_ip, port, password, mapStr string) error {
+func CreateMatchDetails(db *sql.DB, match_id, round_id int, server_ip, port, sourcetvport, password, mapStr string) error {
 	query := `
-	INSERT INTO matches_server_details (match_id, server_ip, port, password, map, round_id, created_at, updated_at)
+	INSERT INTO matches_server_details (match_id, server_ip, port, sourcetvport, password, map, round_id, created_at, updated_at)
 	VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
 	`
-	_, err := db.Exec(query, match_id, server_ip, port, password, mapStr, round_id)
+	_, err := db.Exec(query, match_id, server_ip, port, sourcetvport, password, mapStr, round_id)
 	if err != nil {
 		return fmt.Errorf("failed to create match details: %w", err)
 	}
