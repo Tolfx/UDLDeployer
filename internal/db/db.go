@@ -289,7 +289,7 @@ func FetchMapName(db *sql.DB, mapId int) (*string, error) {
 func CreateMatchDetails(db *sql.DB, match_id, round_id int, server_ip, port, sourcetvport, password, mapStr string) error {
 	query := `
 	INSERT INTO matches_server_details (match_id, server_ip, port, sourcetvport, password, map, round_id, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+	VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
 	`
 	_, err := db.Exec(query, match_id, server_ip, port, sourcetvport, password, mapStr, round_id)
 	if err != nil {
