@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
 
 	"github.com/Tolfx/UDLDeployer/internal/db"
@@ -339,6 +340,41 @@ func main() {
 			return
 		}
 		writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Player chat logs inserted"})
+	})
+
+	// /restart/:matchid/:roundid route
+	http.HandleFunc("/restart/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			writeJSONError(w, http.StatusMethodNotAllowed, "Invalid request method")
+			return
+		}
+		querySecretPassword := r.URL.Query().Get("secret_password")
+		if querySecretPassword != secretPassword {
+			writeJSONError(w, http.StatusUnauthorized, "Unauthorized")
+			return
+		}
+		// Parse /restart/:matchid/:roundid from URL path
+		// Path: /restart/123/456
+		path := r.URL.Path
+		// Remove "/restart/" prefix
+		rest := path[len("/restart/"):]
+		parts := regexp.MustCompile(`/`).Split(rest, -1)
+		if len(parts) < 2 {
+			writeJSONError(w, http.StatusBadRequest, "Missing matchid or roundid in path")
+			return
+		}
+		matchID := parts[0]
+		roundID := parts[1]
+		// Compose deployment name (customize as needed)
+		deploymentName := fmt.Sprintf("udl-%s-%s", matchID, roundID)
+		// Run kubectl rollout restart deployment <deploymentName>
+		cmd := exec.Command("kubectl", "rollout", "restart", "deployment", deploymentName)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to restart deployment: %s", string(output)))
+			return
+		}
+		writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Deployment restarted", "deployment": deploymentName})
 	})
 
 	serverPort := "5823"
