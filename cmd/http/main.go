@@ -363,10 +363,12 @@ func main() {
 			writeJSONError(w, http.StatusBadRequest, "Missing matchid or roundid in path")
 			return
 		}
+
 		matchID := parts[0]
 		roundID := parts[1]
 		// Compose deployment name (customize as needed)
 		deploymentName := fmt.Sprintf("udl-%s-%s", matchID, roundID)
+		fmt.Println("restarting server %s", deploymentName)
 		// Run kubectl rollout restart deployment <deploymentName>
 		cmd := exec.Command("kubectl", "rollout", "restart", "deployment", deploymentName)
 		output, err := cmd.CombinedOutput()
