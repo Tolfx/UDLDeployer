@@ -188,7 +188,7 @@ func FetchLeague(db *sql.DB, divisionId string) (*League, error) {
 	}
 
 	err = db.QueryRow(`
-	SELECT min_players, max_players, points_per_round_win, points_per_round_draw, points_per_round_loss, points_per_match_win, points_per_match_loss, points_per_match_draw, points_per_forfeit_win, points_per_forfeit_loss, points_per_forfeit_draw
+	SELECT min_players, max_players_in_game, points_per_round_win, points_per_round_draw, points_per_round_loss, points_per_match_win, points_per_match_loss, points_per_match_draw, points_per_forfeit_win, points_per_forfeit_loss, points_per_forfeit_draw
 	FROM leagues
 	WHERE id = $1
 	`, leagueID).Scan(&league.MinPlayers, &league.MaxPlayers, &league.PointsPerRoundWin, &league.PointsPerDraw, &league.PointsPerRoundLoss, &league.PointsPerMatchWin, &league.PointsPerMatchLoss, &league.PointsPerMatchDraw, &league.PointsPerForfeitWin, &league.PointsPerForfeitLoss, &league.PointsPerForfeitDraw)
