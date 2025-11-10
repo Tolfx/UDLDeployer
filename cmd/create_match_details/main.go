@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -136,13 +137,45 @@ func main() {
 
 			// Get node external IP and nodePort
 			serviceName := deploymentName
-			cmd = exec.Command("kubectl", "get", "service", serviceName, "-n", "udl", "-o", "jsonpath={.spec.ports[0].nodePort}")
-			nodePortOutput, err := cmd.Output()
+
+			// Fetch the full service JSON and parse it so we can handle missing nodePort gracefully
+			cmd = exec.Command("kubectl", "get", "service", serviceName, "-n", "udl", "-o", "json")
+			serviceJSON, err := cmd.Output()
 			if err != nil {
-				fmt.Println("Error getting nodePort:", err)
+				stderr := ""
+				if exitErr, ok := err.(*exec.ExitError); ok {
+					stderr = string(exitErr.Stderr)
+				}
+				fmt.Printf("Error getting service %s: %v\nkubectl stderr: %s\n", serviceName, err, stderr)
 				panic(err)
 			}
-			nodePort := strings.TrimSpace(string(nodePortOutput))
+
+			// Minimal struct to parse ports
+			var svc struct {
+				Spec struct {
+					Ports []struct {
+						NodePort *int `json:"nodePort"`
+						Port     int  `json:"port"`
+					} `json:"ports"`
+				} `json:"spec"`
+			}
+			if err := json.Unmarshal(serviceJSON, &svc); err != nil {
+				fmt.Println("Error parsing service JSON:", err)
+				panic(err)
+			}
+
+			nodePort := ""
+			if len(svc.Spec.Ports) > 0 {
+				// Prefer NodePort if present (service type NodePort); otherwise fall back to port
+				if svc.Spec.Ports[0].NodePort != nil && *svc.Spec.Ports[0].NodePort != 0 {
+					nodePort = fmt.Sprintf("%d", *svc.Spec.Ports[0].NodePort)
+				} else {
+					nodePort = fmt.Sprintf("%d", svc.Spec.Ports[0].Port)
+				}
+			} else {
+				fmt.Printf("Service %s has no ports defined\n", serviceName)
+				panic(fmt.Errorf("no ports on service %s", serviceName))
+			}
 
 			cmd = exec.Command("kubectl", "get", "nodes", "-o", "jsonpath={.items[0].status.addresses[?(@.type=='ExternalIP')].address}")
 			nodeIPOutput, err := cmd.Output()
