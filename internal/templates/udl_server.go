@@ -169,18 +169,18 @@ metadata:
   name: udl-{{ .MatchID }}-{{ .MatchRound }}
   namespace: udl
   labels:
-    app: udl
+    app: udl-{{ .MatchID }}-{{ .MatchRound }}
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: udl
+      app: udl-{{ .MatchID }}-{{ .MatchRound }}
   template:
     metadata:
       labels:
-        app: udl
+        app: udl-{{ .MatchID }}-{{ .MatchRound }}
     spec:
       containers:
         - name: udl-{{ .MatchID }}-{{ .MatchRound }}
@@ -262,7 +262,7 @@ metadata:
   namespace: udl
 spec:
   selector:
-    app: udl
+    app: udl-{{ .MatchID }}-{{ .MatchRound }}
   ports:
     - name: game-udp
       protocol: UDP
