@@ -29,7 +29,7 @@ func writeJSONError(w http.ResponseWriter, status int, message string) {
 // CORS headers helper
 func setCORSHeaders(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, HEAD")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 }
 
@@ -221,7 +221,7 @@ func main() {
 	})
 
 	http.HandleFunc("/get-demo", corsHandler(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			writeJSONError(w, http.StatusMethodNotAllowed, "Invalid request method")
 			return
 		}
