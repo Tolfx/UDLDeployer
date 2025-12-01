@@ -26,6 +26,25 @@ func writeJSONError(w http.ResponseWriter, status int, message string) {
 	writeJSONResponse(w, status, map[string]string{"error": message})
 }
 
+// CORS headers helper
+func setCORSHeaders(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+}
+
+// CORS middleware wrapper
+func corsHandler(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		handler(w, r)
+	}
+}
+
 type ScoreData struct {
 	MatchID      int `json:"match_id"`
 	RoundID      int `json:"round_id"`
@@ -201,7 +220,7 @@ func main() {
 		writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Demo file uploaded successfully"})
 	})
 
-	http.HandleFunc("/get-demo", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/get-demo", corsHandler(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			writeJSONError(w, http.StatusMethodNotAllowed, "Invalid request method")
 			return
@@ -252,7 +271,7 @@ func main() {
 		// Set the original file name in the response header
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", demoFile))
 		http.ServeFile(w, r, fmt.Sprintf("%s/%s", uploadPath, demoFile))
-	})
+	}))
 
 	// POST /player-match-statistics: Upsert player match statistics
 	http.HandleFunc("/player-match-statistics", func(w http.ResponseWriter, r *http.Request) {
