@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 
 	"github.com/Tolfx/UDLDeployer/internal/db"
 	"github.com/joho/godotenv"
@@ -171,53 +171,7 @@ func main() {
 	})
 
 	http.HandleFunc("/upload-demo", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			writeJSONError(w, http.StatusMethodNotAllowed, "Invalid request method")
-			return
-		}
-
-		querySecretPassword := r.URL.Query().Get("secret_password")
-		if querySecretPassword != secretPassword {
-			writeJSONError(w, http.StatusUnauthorized, "Unauthorized")
-			return
-		}
-
-		file, header, err := r.FormFile("file")
-		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "Error retrieving the file")
-			return
-		}
-		defer file.Close()
-
-		// Create a folder to save the uploaded files if it doesn't exist
-		uploadPath := os.Getenv("UPLOAD_PATH")
-		if uploadPath == "" {
-			uploadPath = "./upload"
-		}
-		if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
-			err = os.Mkdir(uploadPath, os.ModePerm)
-			if err != nil {
-				writeJSONError(w, http.StatusInternalServerError, "Error creating upload directory")
-				return
-			}
-		}
-
-		// Create a file in the upload directory with the same name as the uploaded file
-		dst, err := os.Create(fmt.Sprintf("%s/%s", uploadPath, header.Filename))
-		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "Error creating the file")
-			return
-		}
-		defer dst.Close()
-
-		// Copy the uploaded file to the destination file
-		_, err = io.Copy(dst, file)
-		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "Error saving the file")
-			return
-		}
-
-		writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Demo file uploaded successfully"})
+		writeJSONResponse(w, http.StatusOK, map[string]string{"message": "ok."}) // We dont use this anymore.
 	})
 
 	http.HandleFunc("/get-demo", corsHandler(func(w http.ResponseWriter, r *http.Request) {
@@ -238,8 +192,20 @@ func main() {
 			uploadPath = "./demo"
 		}
 
+		// Force matchID and roundID to be numbers, so people dont try anything funny..
+		matchId, err := strconv.Atoi(matchID)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "Match ID is not a number")
+			return
+		}
+		roundId, err := strconv.Atoi(roundID)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "Round ID is not a number")
+			return
+		}
+
 		// Find the file with the given match ID and round ID using regex
-		filePattern := fmt.Sprintf(`match-%s-round-%s`, matchID, roundID)
+		filePattern := fmt.Sprintf(`match-%d-round-%d`, matchId, roundId)
 		files, err := os.ReadDir(uploadPath)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "Error reading demo directory")
@@ -408,6 +374,7 @@ func main() {
 
 // Helper function to check if a string matches a regex pattern
 func matchRegex(str, pattern string) bool {
+	pattern = regexp.QuoteMeta(pattern)
 	matched, _ := regexp.MatchString(pattern, str)
 	return matched
 }
