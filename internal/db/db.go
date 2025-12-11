@@ -457,13 +457,25 @@ func SendNotificationsToTeams(db *sql.DB, homeRosterId, awayRosterId int, messag
 }
 
 func AreAllRoundsDone(db *sql.DB, matchID int) (bool, error) {
+	// First check if the entire match is marked as not done
+	matchQuery := `SELECT manual_not_done FROM league_matches WHERE id = $1`
+	var matchNotDone bool
+	err := db.QueryRow(matchQuery, matchID).Scan(&matchNotDone)
+	if err != nil {
+		return false, fmt.Errorf("failed to check match status: %w", err)
+	}
+
+	if matchNotDone {
+		return false, nil
+	}
+
 	query := `
 	SELECT COUNT(*)
 	FROM league_match_rounds
 	WHERE match_id = $1 AND has_outcome = FALSE
 	`
 	var count int
-	err := db.QueryRow(query, matchID).Scan(&count)
+	err = db.QueryRow(query, matchID).Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("failed to check if all rounds are done: %w", err)
 	}
