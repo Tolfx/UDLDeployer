@@ -170,6 +170,7 @@ metadata:
   namespace: udl
   labels:
     app: udl-{{ .MatchID }}-{{ .MatchRound }}
+    restart: udl-league
 spec:
   replicas: 1
   strategy:
@@ -181,6 +182,7 @@ spec:
     metadata:
       labels:
         app: udl-{{ .MatchID }}-{{ .MatchRound }}
+        restart: udl-league
     spec:
       containers:
         - name: udl-{{ .MatchID }}-{{ .MatchRound }}
